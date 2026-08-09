@@ -7,6 +7,7 @@
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 500px; margin: auto; }
     .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; border: none; background: #28a745; color: white; border-radius: 8px; cursor: pointer; }
+    .btn:active { background: #1e7e34; }
     #timer { font-size: 22px; font-weight: bold; color: #d9534f; margin: 15px 0; }
     input { width: 80%; padding: 12px; font-size: 16px; margin-bottom: 10px; }
   </style>
@@ -30,31 +31,32 @@
   <script type="module">
     import { db, ref, onValue, set, update } from './firebase-config.js';
 
-    // Questions list (Each question has its own time limit)
+    // Questions array
     const quizQuestions = [
       {
         text: "Question 1: What is the capital of France?",
         options: ["London", "Berlin", "Paris", "Madrid"],
         correctIndex: 2,
-        duration: 20
+        duration: 30
       },
       {
         text: "Question 2: Which planet is known as the Red Planet?",
         options: ["Jupiter", "Mars", "Venus", "Saturn"],
         correctIndex: 1,
-        duration: 20
+        duration: 30
       },
       {
         text: "Question 3: What is the chemical symbol for Gold?",
         options: ["Au", "Ag", "Fe", "Hg"],
         correctIndex: 0,
-        duration: 15
+        duration: 30
       }
     ];
 
     let playerId = localStorage.getItem('quiz_player_id');
     let playerName = localStorage.getItem('quiz_player_name');
     let currentQuestionIdx = 0;
+    let playerScore = 0;
     let questionStartTimestamp = 0;
     let timerInterval = null;
     let gameIsOpen = false;
@@ -81,38 +83,44 @@
       document.getElementById('quiz-section').style.display = 'block';
     }
 
-    // Listen to Host Session State
+    // Listen to Host status
     onValue(ref(db, 'gameState'), (snapshot) => {
       const state = snapshot.val();
 
       if (!state || state.status !== 'OPEN') {
         gameIsOpen = false;
         clearInterval(timerInterval);
-        document.getElementById('questionText').innerText = "Waiting for the Host to open the quiz...";
+        document.getElementById('questionText').innerText = "Waiting for Host to start the quiz...";
         document.getElementById('optionsContainer').innerHTML = '';
         document.getElementById('timer').innerText = '';
         document.getElementById('progress').innerText = '';
-        currentQuestionIdx = 0; // Reset player index if host resets
+        currentQuestionIdx = 0;
+        playerScore = 0;
         return;
       }
 
       if (!gameIsOpen) {
         gameIsOpen = true;
+        currentQuestionIdx = 0;
+        playerScore = 0;
         loadNextQuestion();
       }
     });
 
     function loadNextQuestion() {
+      // 1. Immediately stop any running timer
+      clearInterval(timerInterval);
+
+      // 2. Check if player completed all questions
       if (currentQuestionIdx >= quizQuestions.length) {
-        // Quiz completed for this specific player
-        clearInterval(timerInterval);
-        document.getElementById('questionText').innerText = "🎉 You finished the quiz! Check the live dashboard for results.";
+        document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Leaderboard.";
         document.getElementById('optionsContainer').innerHTML = '';
         document.getElementById('timer').innerText = '';
         document.getElementById('progress').innerText = '';
         return;
       }
 
+      // 3. Render current question
       const q = quizQuestions[currentQuestionIdx];
       questionStartTimestamp = Date.now();
 
@@ -126,19 +134,19 @@
         const btn = document.createElement('button');
         btn.className = 'btn';
         btn.innerText = opt;
+        // Instant trigger on click
         btn.onclick = () => submitAnswer(idx);
         container.appendChild(btn);
       });
 
-      // Individual Question Countdown Timer
-      clearInterval(timerInterval);
+      // 4. Start timer for this specific question
       timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - questionStartTimestamp) / 1000);
         const remaining = q.duration - elapsed;
 
         if (remaining <= 0) {
+          // Time ran out -> instantly skip to next question
           clearInterval(timerInterval);
-          // Time expired for this question -> Auto-advance without awarding points
           currentQuestionIdx++;
           loadNextQuestion();
         } else {
@@ -148,25 +156,22 @@
     }
 
     function submitAnswer(chosenIdx) {
+      // INSTANTLY stop timer and move index
       clearInterval(timerInterval);
 
       const q = quizQuestions[currentQuestionIdx];
       const timeTaken = (Date.now() - questionStartTimestamp) / 1000;
-      let pointsAwarded = 0;
 
+      // Calculate score locally
       if (chosenIdx === q.correctIndex && timeTaken <= q.duration) {
-        pointsAwarded = Math.max(100, Math.round(1000 - timeTaken * 25));
+        const points = Math.max(100, Math.round(1000 - timeTaken * 25));
+        playerScore += points;
       }
 
-      // Add points to player's running score in Firebase
-      onValue(ref(db, `players/${playerId}/score`), (snapshot) => {
-        const currentScore = snapshot.val() || 0;
-        update(ref(db, `players/${playerId}`), {
-          score: currentScore + pointsAwarded
-        });
-      }, { onlyOnce: true });
+      // Update score in Firebase asynchronously (doesn't block the UI)
+      update(ref(db, `players/${playerId}`), { score: playerScore });
 
-      // Move directly to the NEXT question immediately for this player
+      // Move to NEXT question IMMEDIATELY
       currentQuestionIdx++;
       loadNextQuestion();
     }
