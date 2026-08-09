@@ -1,196 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Quiz Player</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 500px; margin: auto; }
-    .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; border: none; background: #28a745; color: white; border-radius: 8px; cursor: pointer; }
-    .btn:disabled { background: #ccc; cursor: not-allowed; }
-    .btn:active { background: #1e7e34; }
-    #timer { font-size: 22px; font-weight: bold; color: #d9534f; margin: 15px 0; }
-    input { width: 80%; padding: 12px; font-size: 16px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
-  </style>
-</head>
-<body>
-  <h1>🎮 Live Quiz</h1>
+<script type="module">
+  import { db, ref, onValue, set, update } from './firebase-config.js';
+  import { quizQuestions } from './questions.js'; // Imports all 200 questions dynamically
 
-  <!-- MANDATORY NICKNAME SECTION -->
-  <div id="join-section">
-    <h3>Enter Your Nickname to Play</h3>
-    <input type="text" id="username" placeholder="Type Nickname Here..." required />
-    <button class="btn" id="joinBtn">Join Quiz</button>
-  </div>
+  let playerId = null;
+  let playerName = "";
+  let currentQuestionIdx = 0;
+  let questionsAnsweredCount = 0;
+  let correctAnswersCount = 0;
+  let totalTimeTaken = 0;
+  let questionStartTimestamp = 0;
+  let timerInterval = null;
+  let gameIsOpen = false;
 
-  <!-- QUIZ SECTION -->
-  <div id="quiz-section" style="display:none;">
-    <div id="playerBadge" style="font-weight: bold; margin-bottom: 10px; color: #007bff;"></div>
-    <div id="progress"></div>
-    <div id="timer"></div>
-    <h2 id="questionText"></h2>
-    <div id="optionsContainer"></div>
-  </div>
+  // Clear previous session memory on fresh page load
+  localStorage.removeItem('quiz_player_id');
+  localStorage.removeItem('quiz_player_name');
 
-  <script type="module">
-    import { db, ref, onValue, set, update } from './firebase-config.js';
-
-    // EDIT YOUR QUIZ QUESTIONS HERE
-    const quizQuestions = [
-      {
-        text: "Question 1: What is the capital of France?",
-        options: ["London", "Berlin", "Paris", "Madrid"],
-        correctIndex: 2,
-        duration: 30
-      },
-      {
-        text: "Question 2: Which planet is known as the Red Planet?",
-        options: ["Jupiter", "Mars", "Venus", "Saturn"],
-        correctIndex: 1,
-        duration: 30
-      },
-      {
-        text: "Question 3: What is the chemical symbol for Gold?",
-        options: ["Au", "Ag", "Fe", "Hg"],
-        correctIndex: 0,
-        duration: 30
-      }
-    ];
-
-    let playerId = null;
-    let playerName = "";
-    let currentQuestionIdx = 0;
-    let correctAnswersCount = 0;
-    let totalTimeTaken = 0;
-    let questionStartTimestamp = 0;
-    let timerInterval = null;
-    let gameIsOpen = false;
-
-    // Clear previous sessions on fresh page load
-    localStorage.removeItem('quiz_player_id');
-    localStorage.removeItem('quiz_player_name');
-
-    document.getElementById('joinBtn').addEventListener('click', () => {
-      const name = document.getElementById('username').value.trim();
-      
-      if (!name) {
-        alert('Nickname is mandatory! Please enter a name to join.');
-        return;
-      }
-
-      playerId = 'player_' + Math.random().toString(36).substring(2, 9);
-      playerName = name;
-
-      // Initialize player record in Firebase with 0 correct answers & 0 time
-      set(ref(db, `players/${playerId}`), { 
-        name: playerName, 
-        correctAnswers: 0,
-        totalTime: 0
-      });
-
-      document.getElementById('join-section').style.display = 'none';
-      document.getElementById('quiz-section').style.display = 'block';
-      document.getElementById('playerBadge').innerText = `Player: ${playerName}`;
-
-      initGameListener();
-    });
-
-    function initGameListener() {
-      onValue(ref(db, 'gameState'), (snapshot) => {
-        const state = snapshot.val();
-
-        if (!state || state.status !== 'OPEN') {
-          gameIsOpen = false;
-          clearInterval(timerInterval);
-          document.getElementById('questionText').innerText = "Waiting for Host to start the quiz...";
-          document.getElementById('optionsContainer').innerHTML = '';
-          document.getElementById('timer').innerText = '';
-          document.getElementById('progress').innerText = '';
-          currentQuestionIdx = 0;
-          correctAnswersCount = 0;
-          totalTimeTaken = 0;
-          return;
-        }
-
-        if (!gameIsOpen) {
-          gameIsOpen = true;
-          currentQuestionIdx = 0;
-          correctAnswersCount = 0;
-          totalTimeTaken = 0;
-          loadNextQuestion();
-        }
-      });
+  document.getElementById('joinBtn').addEventListener('click', () => {
+    const name = document.getElementById('username').value.trim();
+    
+    if (!name) {
+      alert('Nickname is mandatory! Please enter a name to join.');
+      return;
     }
 
-    function loadNextQuestion() {
-      clearInterval(timerInterval);
+    playerId = 'player_' + Math.random().toString(36).substring(2, 9);
+    playerName = name;
 
-      if (currentQuestionIdx >= quizQuestions.length) {
-        document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Leaderboard.";
+    set(ref(db, `players/${playerId}`), { 
+      name: playerName, 
+      questionsAnswered: 0,
+      correctAnswers: 0,
+      totalTime: 0
+    });
+
+    document.getElementById('join-section').style.display = 'none';
+    document.getElementById('quiz-section').style.display = 'block';
+    document.getElementById('playerBadge').innerText = `Player: ${playerName}`;
+
+    initGameListener();
+  });
+
+  function initGameListener() {
+    onValue(ref(db, 'gameState'), (snapshot) => {
+      const state = snapshot.val();
+
+      if (!state || state.status !== 'OPEN') {
+        gameIsOpen = false;
+        clearInterval(timerInterval);
+        document.getElementById('questionText').innerText = "Waiting for Host to start the quiz...";
         document.getElementById('optionsContainer').innerHTML = '';
         document.getElementById('timer').innerText = '';
         document.getElementById('progress').innerText = '';
+        currentQuestionIdx = 0;
+        questionsAnsweredCount = 0;
+        correctAnswersCount = 0;
+        totalTimeTaken = 0;
         return;
       }
 
-      const q = quizQuestions[currentQuestionIdx];
-      questionStartTimestamp = Date.now();
-
-      document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${quizQuestions.length}`;
-      document.getElementById('questionText').innerText = q.text;
-
-      const container = document.getElementById('optionsContainer');
-      container.innerHTML = '';
-
-      q.options.forEach((opt, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'btn';
-        btn.innerText = opt;
-        btn.onclick = () => submitAnswer(idx);
-        container.appendChild(btn);
-      });
-
-      timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - questionStartTimestamp) / 1000);
-        const remaining = q.duration - elapsed;
-
-        if (remaining <= 0) {
-          // Time expired for this question: count full duration as time taken
-          clearInterval(timerInterval);
-          totalTimeTaken += q.duration;
-          syncStatsToFirebase();
-          currentQuestionIdx++;
-          loadNextQuestion();
-        } else {
-          document.getElementById('timer').innerText = `⏱ Time Remaining: ${remaining}s`;
-        }
-      }, 200);
-    }
-
-    function submitAnswer(chosenIdx) {
-      clearInterval(timerInterval);
-
-      const q = quizQuestions[currentQuestionIdx];
-      const timeTaken = Math.min(q.duration, (Date.now() - questionStartTimestamp) / 1000);
-      totalTimeTaken += timeTaken;
-
-      if (chosenIdx === q.correctIndex) {
-        correctAnswersCount += 1;
+      if (!gameIsOpen) {
+        gameIsOpen = true;
+        currentQuestionIdx = 0;
+        questionsAnsweredCount = 0;
+        correctAnswersCount = 0;
+        totalTimeTaken = 0;
+        loadNextQuestion();
       }
+    });
+  }
 
-      syncStatsToFirebase();
+  function loadNextQuestion() {
+    clearInterval(timerInterval);
 
-      // Instantly advance to next question
-      currentQuestionIdx++;
-      loadNextQuestion();
+    if (currentQuestionIdx >= quizQuestions.length) {
+      document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Leaderboard.";
+      document.getElementById('optionsContainer').innerHTML = '';
+      document.getElementById('timer').innerText = '';
+      document.getElementById('progress').innerText = '';
+      return;
     }
 
-    function syncStatsToFirebase() {
-      update(ref(db, `players/${playerId}`), { 
-        correctAnswers: correctAnswersCount,
-        totalTime: Number(totalTimeTaken.toFixed(2))
-      });
+    const q = quizQuestions[currentQuestionIdx];
+    questionStartTimestamp = Date.now();
+
+    document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${quizQuestions.length}`;
+    document.getElementById('questionText').innerText = q.text;
+
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+
+    q.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.innerText = opt;
+      btn.onclick = () => submitAnswer(idx);
+      container.appendChild(btn);
+    });
+
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - questionStartTimestamp) / 1000);
+      const remaining = q.duration - elapsed;
+
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+        totalTimeTaken += q.duration;
+        questionsAnsweredCount += 1;
+        syncStatsToFirebase();
+        currentQuestionIdx++;
+        loadNextQuestion();
+      } else {
+        document.getElementById('timer').innerText = `⏱ Time Remaining: ${remaining}s`;
+      }
+    }, 200);
+  }
+
+  function submitAnswer(chosenIdx) {
+    clearInterval(timerInterval);
+
+    const q = quizQuestions[currentQuestionIdx];
+    const timeTaken = Math.min(q.duration, (Date.now() - questionStartTimestamp) / 1000);
+    
+    totalTimeTaken += timeTaken;
+    questionsAnsweredCount += 1;
+
+    if (chosenIdx === q.correctIndex) {
+      correctAnswersCount += 1;
     }
-  </script>
-</body>
-</html>
+
+    syncStatsToFirebase();
+
+    currentQuestionIdx++;
+    loadNextQuestion();
+  }
+
+  function syncStatsToFirebase() {
+    update(ref(db, `players/${playerId}`), { 
+      questionsAnswered: questionsAnsweredCount,
+      correctAnswers: correctAnswersCount,
+      totalTime: Number(totalTimeTaken.toFixed(2))
+    });
+  }
+</script>
