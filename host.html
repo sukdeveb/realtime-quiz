@@ -12,7 +12,7 @@
     #auth-screen { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px; margin: 50px auto; }
     input[type="password"] { width: 80%; padding: 12px; font-size: 16px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
     
-    /* Grid Layout for Combined Dashboard */
+    /* Grid Layout */
     .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
     @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
     
@@ -37,18 +37,18 @@
   <!-- Password Authentication Screen -->
   <div id="auth-screen">
     🔒 <h2>Admin Authentication</h2>
-    <p>Enter the host password to access controls & live dashboard.</p>
+    <p>Enter password to access host controls & live dashboard.</p>
     <input type="password" id="adminPassword" placeholder="Enter Password" />
     <button id="loginBtn" class="success">Unlock Admin Panel</button>
     <p id="authError" style="color: red; display: none;">Incorrect Password!</p>
   </div>
 
-  <!-- Combined Admin Panel (Hidden by default) -->
+  <!-- Combined Admin Panel -->
   <div id="admin-panel" style="display: none;">
     <h1>🎯 Quiz Control Hub & Live Dashboard</h1>
     
     <div class="dashboard-grid">
-      <!-- Column 1: Host Controls -->
+      <!-- Host Controls -->
       <div class="card">
         <h2>🎮 Host Controls</h2>
         <p>Status: <span id="statusBadge" class="status-badge status-closed">Closed</span></p>
@@ -57,7 +57,7 @@
         <button id="resetBtn" class="danger">🔄 Reset Quiz & Player Scores</button>
       </div>
 
-      <!-- Column 2: Live Leaderboard Dashboard -->
+      <!-- Live Leaderboard Dashboard -->
       <div class="card">
         <h2>🏆 Live Leaderboard</h2>
         <table>
@@ -65,11 +65,12 @@
             <tr>
               <th>Rank</th>
               <th>Player</th>
-              <th>Score</th>
+              <th>Correct</th>
+              <th>Total Time</th>
             </tr>
           </thead>
           <tbody id="leaderboardBody">
-            <tr><td colspan="3">Waiting for data...</td></tr>
+            <tr><td colspan="4">Waiting for data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -79,14 +80,12 @@
   <script type="module">
     import { db, ref, onValue, set } from './firebase-config.js';
 
-    // Set your admin password here
-    const ADMIN_PASSWORD = "admin";
+    const ADMIN_PASSWORD = "admin"; // Edit password here
 
     const authScreen = document.getElementById('auth-screen');
     const adminPanel = document.getElementById('admin-panel');
     const authError = document.getElementById('authError');
 
-    // Password Check Logic
     document.getElementById('loginBtn').addEventListener('click', () => {
       const inputPass = document.getElementById('adminPassword').value;
       if (inputPass === ADMIN_PASSWORD) {
@@ -99,7 +98,7 @@
     });
 
     function initAdminPanel() {
-      // 1. Listen to Quiz Status
+      // Listen to Quiz Status
       onValue(ref(db, 'gameState'), (snapshot) => {
         const state = snapshot.val();
         const badge = document.getElementById('statusBadge');
@@ -112,7 +111,7 @@
         }
       });
 
-      // 2. Open Quiz Button
+      // Open Quiz Button
       document.getElementById('startQuizBtn').addEventListener('click', () => {
         set(ref(db, 'gameState'), {
           status: 'OPEN',
@@ -120,7 +119,7 @@
         });
       });
 
-      // 3. Reset Quiz Button
+      // Reset Quiz Button
       document.getElementById('resetBtn').addEventListener('click', () => {
         if (confirm("Are you sure you want to reset all scores and close the quiz?")) {
           set(ref(db, 'gameState'), null);
@@ -128,26 +127,43 @@
         }
       });
 
-      // 4. Real-time Leaderboard Synchronization
+      // Real-time Leaderboard Sorting Rule:
+      // 1. Highest Correct Answers First (b.correctAnswers - a.correctAnswers)
+      // 2. Lowest Total Time Second (a.totalTime - b.totalTime)
       onValue(ref(db, 'players'), (snapshot) => {
         const players = snapshot.val() || {};
         const tbody = document.getElementById('leaderboardBody');
         tbody.innerHTML = '';
 
         const playerList = Object.values(players);
-        playerList.sort((a, b) => b.score - a.score);
+
+        playerList.sort((a, b) => {
+          const correctA = a.correctAnswers || 0;
+          const correctB = b.correctAnswers || 0;
+          const timeA = a.totalTime || 0;
+          const timeB = b.totalTime || 0;
+
+          if (correctB !== correctA) {
+            return correctB - correctA; // Higher correct count wins
+          }
+          return timeA - timeB; // Lower total time wins if tied
+        });
 
         if (playerList.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3">No active players yet...</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4">No active players yet...</td></tr>';
           return;
         }
 
         playerList.forEach((p, index) => {
           const tr = document.createElement('tr');
+          const correctCount = p.correctAnswers || 0;
+          const timeVal = p.totalTime !== undefined ? `${p.totalTime}s` : '0s';
+
           tr.innerHTML = `
             <td>#${index + 1}</td>
             <td>${p.name}</td>
-            <td><strong>${p.score} pts</strong></td>
+            <td><strong>${correctCount}</strong></td>
+            <td>${timeVal}</td>
           `;
           tbody.appendChild(tr);
         });
