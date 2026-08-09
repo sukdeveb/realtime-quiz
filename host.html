@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quiz Host Control Panel</title>
+  <title>Quiz Host Control Panel (Auto Advance)</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
     .card { background: #f4f4f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -11,15 +11,15 @@
     button:disabled { background: #ccc; cursor: not-allowed; }
     .success { background: #28a745; }
     .danger { background: #dc3545; }
+    #statusText { color: #333; font-size: 20px; }
   </style>
 </head>
 <body>
-  <h2>🎯 Host Control Panel</h2>
+  <h2>🎯 Host Control Panel (Fully Automated)</h2>
 
   <div class="card">
     <h3 id="statusText">Quiz Ready</h3>
-    <button id="startQuizBtn" class="success">🚀 Start Full Quiz</button>
-    <button id="nextQBtn" disabled>▶️ Next Question</button>
+    <button id="startQuizBtn" class="success">🚀 Start Auto Quiz</button>
   </div>
 
   <div class="card">
@@ -29,59 +29,53 @@
   <script type="module">
     import { db, ref, set } from './firebase-config.js';
 
-    // Define all your quiz questions here
+    // Set your questions, options, correct answers, and duration in seconds
     const quizQuestions = [
       {
         text: "Question 1: What is the capital of France?",
         options: ["London", "Berlin", "Paris", "Madrid"],
         correctIndex: 2,
-        duration: 30
+        duration: 15
       },
       {
         text: "Question 2: Which planet is known as the Red Planet?",
         options: ["Jupiter", "Mars", "Venus", "Saturn"],
         correctIndex: 1,
-        duration: 30
+        duration: 15
       },
       {
         text: "Question 3: What is the chemical symbol for Gold?",
         options: ["Au", "Ag", "Fe", "Hg"],
         correctIndex: 0,
-        duration: 20
+        duration: 15
       }
     ];
 
-    let currentQuestionIndex = -1;
+    let currentQuestionIndex = 0;
+    let autoTimer = null;
+    const BREAK_BETWEEN_QUESTIONS_SEC = 3; // Pause duration between questions
 
     const startBtn = document.getElementById('startQuizBtn');
-    const nextBtn = document.getElementById('nextQBtn');
     const statusText = document.getElementById('statusText');
 
-    // Start Quiz from Question 1
     startBtn.addEventListener('click', () => {
-      currentQuestionIndex = 0;
-      publishQuestion();
       startBtn.disabled = true;
-      nextBtn.disabled = false;
+      currentQuestionIndex = 0;
+      runAutoQuizCycle();
     });
 
-    // Advance to next question
-    nextBtn.addEventListener('click', () => {
-      if (currentQuestionIndex < quizQuestions.length - 1) {
-        currentQuestionIndex++;
-        publishQuestion();
-      } else {
-        // End Quiz
+    function runAutoQuizCycle() {
+      if (currentQuestionIndex >= quizQuestions.length) {
+        // All questions completed
         set(ref(db, 'gameState'), { status: 'FINISHED' });
         statusText.innerText = "🏆 Quiz Completed!";
-        nextBtn.disabled = true;
+        return;
       }
-    });
 
-    function publishQuestion() {
       const q = quizQuestions[currentQuestionIndex];
       statusText.innerText = `Active: Question ${currentQuestionIndex + 1} of ${quizQuestions.length}`;
 
+      // 1. Publish Current Question to Firebase
       set(ref(db, 'gameState'), {
         status: 'ACTIVE',
         questionIndex: currentQuestionIndex,
@@ -92,17 +86,26 @@
         duration: q.duration,
         startTimestamp: Date.now()
       });
+
+      // 2. Schedule Auto Advance (Question Time + Pause Time)
+      const totalCycleTimeMs = (q.duration + BREAK_BETWEEN_QUESTIONS_SEC) * 1000;
+
+      clearTimeout(autoTimer);
+      autoTimer = setTimeout(() => {
+        currentQuestionIndex++;
+        runAutoQuizCycle(); // Automatically triggers next question
+      }, totalCycleTimeMs);
     }
 
-    // Reset whole game
+    // Reset Quiz & Stop Automatic Loop
     document.getElementById('resetBtn').addEventListener('click', () => {
-      currentQuestionIndex = -1;
+      clearTimeout(autoTimer);
+      currentQuestionIndex = 0;
       set(ref(db, 'gameState'), null);
       set(ref(db, 'players'), null);
       statusText.innerText = "Quiz Reset";
       startBtn.disabled = false;
-      nextBtn.disabled = true;
-      alert('Quiz and players reset!');
+      alert('Quiz and scores reset!');
     });
   </script>
 </body>
