@@ -16,14 +16,14 @@
 <body>
   <h1>🎮 Live Quiz</h1>
 
-  <!-- MANDATORY NICKNAME SECTION (Always active on website open) -->
+  <!-- MANDATORY NICKNAME SECTION -->
   <div id="join-section">
     <h3>Enter Your Nickname to Play</h3>
     <input type="text" id="username" placeholder="Type Nickname Here..." required />
     <button class="btn" id="joinBtn">Join Quiz</button>
   </div>
 
-  <!-- QUIZ SECTION (Hidden until Nickname is entered) -->
+  <!-- QUIZ SECTION -->
   <div id="quiz-section" style="display:none;">
     <div id="playerBadge" style="font-weight: bold; margin-bottom: 10px; color: #007bff;"></div>
     <div id="progress"></div>
@@ -60,20 +60,19 @@
     let playerId = null;
     let playerName = "";
     let currentQuestionIdx = 0;
-    let playerScore = 0;
+    let correctAnswersCount = 0;
+    let totalTimeTaken = 0;
     let questionStartTimestamp = 0;
     let timerInterval = null;
     let gameIsOpen = false;
 
-    // Clear any previously saved sessions on page load
+    // Clear previous sessions on fresh page load
     localStorage.removeItem('quiz_player_id');
     localStorage.removeItem('quiz_player_name');
 
-    // Handle Join Button Click
     document.getElementById('joinBtn').addEventListener('click', () => {
       const name = document.getElementById('username').value.trim();
       
-      // Strict validation for nickname
       if (!name) {
         alert('Nickname is mandatory! Please enter a name to join.');
         return;
@@ -82,15 +81,17 @@
       playerId = 'player_' + Math.random().toString(36).substring(2, 9);
       playerName = name;
 
-      // Register new player in Firebase
-      set(ref(db, `players/${playerId}`), { name: playerName, score: 0 });
+      // Initialize player record in Firebase with 0 correct answers & 0 time
+      set(ref(db, `players/${playerId}`), { 
+        name: playerName, 
+        correctAnswers: 0,
+        totalTime: 0
+      });
 
-      // Hide join screen, show quiz interface
       document.getElementById('join-section').style.display = 'none';
       document.getElementById('quiz-section').style.display = 'block';
       document.getElementById('playerBadge').innerText = `Player: ${playerName}`;
 
-      // Start listening to the game status
       initGameListener();
     });
 
@@ -106,14 +107,16 @@
           document.getElementById('timer').innerText = '';
           document.getElementById('progress').innerText = '';
           currentQuestionIdx = 0;
-          playerScore = 0;
+          correctAnswersCount = 0;
+          totalTimeTaken = 0;
           return;
         }
 
         if (!gameIsOpen) {
           gameIsOpen = true;
           currentQuestionIdx = 0;
-          playerScore = 0;
+          correctAnswersCount = 0;
+          totalTimeTaken = 0;
           loadNextQuestion();
         }
       });
@@ -152,7 +155,10 @@
         const remaining = q.duration - elapsed;
 
         if (remaining <= 0) {
+          // Time expired for this question: count full duration as time taken
           clearInterval(timerInterval);
+          totalTimeTaken += q.duration;
+          syncStatsToFirebase();
           currentQuestionIdx++;
           loadNextQuestion();
         } else {
@@ -165,19 +171,25 @@
       clearInterval(timerInterval);
 
       const q = quizQuestions[currentQuestionIdx];
-      const timeTaken = (Date.now() - questionStartTimestamp) / 1000;
+      const timeTaken = Math.min(q.duration, (Date.now() - questionStartTimestamp) / 1000);
+      totalTimeTaken += timeTaken;
 
-      if (chosenIdx === q.correctIndex && timeTaken <= q.duration) {
-        const points = Math.max(100, Math.round(1000 - timeTaken * 25));
-        playerScore += points;
+      if (chosenIdx === q.correctIndex) {
+        correctAnswersCount += 1;
       }
 
-      // Sync score to Firebase
-      update(ref(db, `players/${playerId}`), { score: playerScore });
+      syncStatsToFirebase();
 
-      // INSTANTLY move to Question 2
+      // Instantly advance to next question
       currentQuestionIdx++;
       loadNextQuestion();
+    }
+
+    function syncStatsToFirebase() {
+      update(ref(db, `players/${playerId}`), { 
+        correctAnswers: correctAnswersCount,
+        totalTime: Number(totalTimeTaken.toFixed(2))
+      });
     }
   </script>
 </body>
