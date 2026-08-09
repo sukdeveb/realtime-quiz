@@ -43,6 +43,7 @@
 
     let playerId = null;
     let playerName = "";
+    let playerQuestions = []; // Shuffled questions unique to each player
     let currentQuestionIdx = 0;
     let questionsAnsweredCount = 0;
     let correctAnswersCount = 0;
@@ -51,9 +52,19 @@
     let timerInterval = null;
     let gameIsOpen = false;
 
-    // Force mandatory nickname by clearing previous session memory on every page load
+    // Clear previous session memory on fresh page load
     localStorage.removeItem('quiz_player_id');
     localStorage.removeItem('quiz_player_name');
+
+    // Fisher-Yates Shuffle Algorithm (shuffles arrays in-place)
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
 
     document.getElementById('joinBtn').addEventListener('click', () => {
       const name = document.getElementById('username').value.trim();
@@ -65,6 +76,9 @@
 
       playerId = 'player_' + Math.random().toString(36).substring(2, 9);
       playerName = name;
+
+      // Create a unique randomized question order for this player
+      playerQuestions = shuffleArray(quizQuestions);
 
       // Register new player in Firebase
       set(ref(db, `players/${playerId}`), { 
@@ -113,7 +127,7 @@
     function loadNextQuestion() {
       clearInterval(timerInterval);
 
-      if (currentQuestionIdx >= quizQuestions.length) {
+      if (currentQuestionIdx >= playerQuestions.length) {
         document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Live Leaderboard for final results.";
         document.getElementById('optionsContainer').innerHTML = '';
         document.getElementById('timer').innerText = '';
@@ -121,20 +135,28 @@
         return;
       }
 
-      const q = quizQuestions[currentQuestionIdx];
+      const q = playerQuestions[currentQuestionIdx];
       questionStartTimestamp = Date.now();
 
-      document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${quizQuestions.length}`;
+      document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${playerQuestions.length}`;
       document.getElementById('questionText').innerText = q.text;
 
       const container = document.getElementById('optionsContainer');
       container.innerHTML = '';
 
-      q.options.forEach((opt, idx) => {
+      // Map options with their original correctness state, then shuffle options randomly
+      const optionsWithCorrectness = q.options.map((optText, idx) => ({
+        text: optText,
+        isCorrect: idx === q.correctIndex
+      }));
+
+      const shuffledOptions = shuffleArray(optionsWithCorrectness);
+
+      shuffledOptions.forEach((optObj) => {
         const btn = document.createElement('button');
         btn.className = 'btn';
-        btn.innerText = opt;
-        btn.onclick = () => submitAnswer(idx);
+        btn.innerText = optObj.text;
+        btn.onclick = () => submitAnswer(optObj.isCorrect);
         container.appendChild(btn);
       });
 
@@ -143,7 +165,6 @@
         const remaining = q.duration - elapsed;
 
         if (remaining <= 0) {
-          // Time expired for this question: log full duration and move to next question automatically
           clearInterval(timerInterval);
           totalTimeTaken += q.duration;
           questionsAnsweredCount += 1;
@@ -156,22 +177,21 @@
       }, 200);
     }
 
-    function submitAnswer(chosenIdx) {
+    function submitAnswer(isCorrect) {
       clearInterval(timerInterval);
 
-      const q = quizQuestions[currentQuestionIdx];
+      const q = playerQuestions[currentQuestionIdx];
       const timeTaken = Math.min(q.duration, (Date.now() - questionStartTimestamp) / 1000);
       
       totalTimeTaken += timeTaken;
       questionsAnsweredCount += 1;
 
-      if (chosenIdx === q.correctIndex) {
+      if (isCorrect) {
         correctAnswersCount += 1;
       }
 
       syncStatsToFirebase();
 
-      // Instant transition to next question
       currentQuestionIdx++;
       loadNextQuestion();
     }
