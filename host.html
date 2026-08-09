@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Host Control Panel</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    .card { background: #f4f4f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    button { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; }
+    button:hover { background: #0056b3; }
+    .danger { background: #dc3545; }
+    .danger:hover { background: #a71d2a; }
+  </style>
+</head>
+<body>
+  <h2>🎯 Host Control Panel</h2>
+  <div class="card">
+    <h3>Trigger Question 1</h3>
+    <p>What is the capital of France?</p>
+    <button id="q1Btn">Activate Q1 (30 Seconds)</button>
+  </div>
+
+  <div class="card">
+    <h3>Trigger Question 2</h3>
+    <p>Which planet is known as the Red Planet?</p>
+    <button id="q2Btn">Activate Q2 (30 Seconds)</button>
+  </div>
+
+  <div class="card">
+    <button id="resetBtn" class="danger">Reset Game & Scores</button>
+  </div>
+
+  <script type="module">
+    import { db, ref, set } from './firebase-config.js';
+
+    // Activate Question 1
+    document.getElementById('q1Btn').addEventListener('click', () => {
+      set(ref(db, 'gameState'), {
+        questionId: "q1",
+        text: "What is the capital of France?",
+        options: ["London", "Berlin", "Paris", "Madrid"],
+        correctIndex: 2,
+        duration: 30,
+        startTimestamp: Date.now()
+      });
+      alert('Question 1 Activated!');
+    });
+
+    // Activate Question 2
+    document.getElementById('q2Btn').addEventListener('click', () => {
+      set(ref(db, 'gameState'), {
+        questionId: "q2",
+        text: "Which planet is known as the Red Planet?",
+        options: ["Jupiter", "Mars", "Venus", "Saturn"],
+        correctIndex: 1,
+        duration: 30,
+        startTimestamp: Date.now()
+      });
+      alert('Question 2 Activated!');
+    });
+
+    // Reset Quiz
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      set(ref(db, 'gameState'), null);
+      set(ref(db, 'players'), null);
+      alert('Quiz Reset!');
+    });
+  </script>
+</body>
+</html>
