@@ -56,7 +56,7 @@
     localStorage.removeItem('quiz_player_id');
     localStorage.removeItem('quiz_player_name');
 
-    // Fisher-Yates Shuffle Algorithm (shuffles arrays in-place)
+    // Fisher-Yates Shuffle Algorithm
     function shuffleArray(array) {
       const shuffled = [...array];
       for (let i = shuffled.length - 1; i > 0; i--) {
@@ -138,13 +138,16 @@
       const q = playerQuestions[currentQuestionIdx];
       questionStartTimestamp = Date.now();
 
+      // Automatically strip out any hardcoded "Question X:" prefix from text
+      const cleanQuestionText = q.text.replace(/^Question\s+\d+[:\.-]?\s*/i, '');
+
       document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${playerQuestions.length}`;
-      document.getElementById('questionText').innerText = q.text;
+      document.getElementById('questionText').innerText = cleanQuestionText;
 
       const container = document.getElementById('optionsContainer');
       container.innerHTML = '';
 
-      // Map options with their original correctness state, then shuffle options randomly
+      // Map options with correctness state, then shuffle options randomly
       const optionsWithCorrectness = q.options.map((optText, idx) => ({
         text: optText,
         isCorrect: idx === q.correctIndex
