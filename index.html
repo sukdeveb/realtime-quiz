@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Quiz Player</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 500px; margin: auto; }
+    .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; border: none; background: #28a745; color: white; border-radius: 8px; cursor: pointer; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    #timer { font-size: 22px; font-weight: bold; color: #d9534f; margin: 15px 0; }
+    input { width: 80%; padding: 12px; font-size: 16px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Live Quiz</h1>
+
+  <div id="join-section">
+    <h3>Enter Your Nickname</h3>
+    <input type="text" id="username" placeholder="Your Name" />
+    <button class="btn" id="joinBtn">Join Quiz</button>
+  </div>
+
+  <div id="quiz-section" style="display:none;">
+    <div id="timer">Waiting for Host to start...</div>
+    <h2 id="questionText"></h2>
+    <div id="optionsContainer"></div>
+  </div>
+
+  <script type="module">
+    import { db, ref, onValue, set, update } from './firebase-config.js';
+
+    let playerId = localStorage.getItem('quiz_player_id');
+    let playerName = localStorage.getItem('quiz_player_name');
+    let timerInterval = null;
+    let currentQuestionId = null;
+
+    if (playerId && playerName) {
+      showQuizScreen();
+    }
+
+    document.getElementById('joinBtn').addEventListener('click', () => {
+      const name = document.getElementById('username').value.trim();
+      if (!name) return alert('Please enter a name');
+      
+      playerId = 'player_' + Math.random().toString(36).substring(2, 9);
+      playerName = name;
+      localStorage.setItem('quiz_player_id', playerId);
+      localStorage.setItem('quiz_player_name', playerName);
+
+      set(ref(db, `players/${playerId}`), { name: playerName, score: 0 });
+      showQuizScreen();
+    });
+
+    function showQuizScreen() {
+      document.getElementById('join-section').style.display = 'none';
+      document.getElementById('quiz-section').style.display = 'block';
+    }
+
+    // Listen to Game State Changes
+    onValue(ref(db, 'gameState'), (snapshot) => {
+      const qData = snapshot.val();
+      const container = document.getElementById('optionsContainer');
+      const timerDisplay = document.getElementById('timer');
+
+      if (!qData) {
+        document.getElementById('questionText').innerText = "Waiting for Host to activate a question...";
+        container.innerHTML = '';
+        timerDisplay.innerText = '';
+        clearInterval(timerInterval);
+        return;
+      }
+
+      if (currentQuestionId !== qData.questionId) {
+        currentQuestionId = qData.questionId;
+        document.getElementById('questionText').innerText = qData.text;
+        container.innerHTML = '';
+
+        qData.options.forEach((opt, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'btn';
+          btn.innerText = opt;
+          btn.onclick = () => submitAnswer(idx, qData);
+          container.appendChild(btn);
+        });
+      }
+
+      // Live Timer Sync
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - qData.startTimestamp) / 1000);
+        const remaining = qData.duration - elapsed;
+
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          timerDisplay.innerText = "⏰ Time's Up!";
+          container.innerHTML = '<h3>Time for this question has expired!</h3>';
+        } else {
+          timerDisplay.innerText = `⏱ Time Remaining: ${remaining}s`;
+        }
+      }, 200);
+    });
+
+    function submitAnswer(chosenIdx, qData) {
+      const timeTaken = (Date.now() - qData.startTimestamp) / 1000;
+      let pointsAwarded = 0;
+
+      if (chosenIdx === qData.correctIndex && timeTaken <= qData.duration) {
+        // Calculate points based on speed (max 1000 points, min 100)
+        pointsAwarded = Math.max(100, Math.round(1000 - timeTaken * 25));
+      }
+
+      // Update player score in Firebase
+      onValue(ref(db, `players/${playerId}/score`), (snapshot) => {
+        const currentScore = snapshot.val() || 0;
+        update(ref(db, `players/${playerId}`), {
+          score: currentScore + pointsAwarded
+        });
+      }, { onlyOnce: true });
+
+      document.getElementById('optionsContainer').innerHTML = '<h3>✅ Answer Submitted! Waiting for next question...</h3>';
+    }
+  </script>
+</body>
+</html>
