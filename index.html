@@ -1,144 +1,188 @@
-<script type="module">
-  import { db, ref, onValue, set, update } from './firebase-config.js';
-  import { quizQuestions } from './questions.js'; // Imports all 200 questions dynamically
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agricultural Machinery & Power Engineering Quiz</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 650px; margin: auto; background-color: #f9f9f9; }
+    .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .btn { display: block; width: 100%; padding: 14px; margin: 10px 0; font-size: 16px; border: 1px solid #28a745; background: #28a745; color: white; border-radius: 8px; cursor: pointer; text-align: left; transition: background 0.2s; }
+    .btn:hover { background: #218838; }
+    .btn:active { background: #1e7e34; }
+    #timer { font-size: 22px; font-weight: bold; color: #d9534f; margin: 15px 0; }
+    #progress { font-size: 16px; font-weight: bold; color: #555; margin-bottom: 10px; }
+    input { width: 85%; padding: 12px; font-size: 16px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; }
+    h2 { color: #333; line-height: 1.4; font-size: 1.15rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>🚜 Agricultural Engineering Quiz</h1>
 
-  let playerId = null;
-  let playerName = "";
-  let currentQuestionIdx = 0;
-  let questionsAnsweredCount = 0;
-  let correctAnswersCount = 0;
-  let totalTimeTaken = 0;
-  let questionStartTimestamp = 0;
-  let timerInterval = null;
-  let gameIsOpen = false;
+  <div class="card">
+    <!-- MANDATORY NICKNAME SECTION -->
+    <div id="join-section">
+      <h3>Enter Your Nickname to Start</h3>
+      <input type="text" id="username" placeholder="Type Nickname Here..." required />
+      <button class="btn" id="joinBtn" style="text-align:center;">Join Quiz</button>
+    </div>
 
-  // Clear previous session memory on fresh page load
-  localStorage.removeItem('quiz_player_id');
-  localStorage.removeItem('quiz_player_name');
+    <!-- QUIZ SECTION -->
+    <div id="quiz-section" style="display:none;">
+      <div id="playerBadge" style="font-weight: bold; margin-bottom: 10px; color: #007bff; text-align: left;"></div>
+      <div id="progress"></div>
+      <div id="timer"></div>
+      <h2 id="questionText"></h2>
+      <div id="optionsContainer"></div>
+    </div>
+  </div>
 
-  document.getElementById('joinBtn').addEventListener('click', () => {
-    const name = document.getElementById('username').value.trim();
-    
-    if (!name) {
-      alert('Nickname is mandatory! Please enter a name to join.');
-      return;
-    }
+  <script type="module">
+    import { db, ref, onValue, set, update } from './firebase-config.js';
+    import { quizQuestions } from './questions.js';
 
-    playerId = 'player_' + Math.random().toString(36).substring(2, 9);
-    playerName = name;
+    let playerId = null;
+    let playerName = "";
+    let currentQuestionIdx = 0;
+    let questionsAnsweredCount = 0;
+    let correctAnswersCount = 0;
+    let totalTimeTaken = 0;
+    let questionStartTimestamp = 0;
+    let timerInterval = null;
+    let gameIsOpen = false;
 
-    set(ref(db, `players/${playerId}`), { 
-      name: playerName, 
-      questionsAnswered: 0,
-      correctAnswers: 0,
-      totalTime: 0
-    });
+    // Force mandatory nickname by clearing previous session memory on every page load
+    localStorage.removeItem('quiz_player_id');
+    localStorage.removeItem('quiz_player_name');
 
-    document.getElementById('join-section').style.display = 'none';
-    document.getElementById('quiz-section').style.display = 'block';
-    document.getElementById('playerBadge').innerText = `Player: ${playerName}`;
-
-    initGameListener();
-  });
-
-  function initGameListener() {
-    onValue(ref(db, 'gameState'), (snapshot) => {
-      const state = snapshot.val();
-
-      if (!state || state.status !== 'OPEN') {
-        gameIsOpen = false;
-        clearInterval(timerInterval);
-        document.getElementById('questionText').innerText = "Waiting for Host to start the quiz...";
-        document.getElementById('optionsContainer').innerHTML = '';
-        document.getElementById('timer').innerText = '';
-        document.getElementById('progress').innerText = '';
-        currentQuestionIdx = 0;
-        questionsAnsweredCount = 0;
-        correctAnswersCount = 0;
-        totalTimeTaken = 0;
+    document.getElementById('joinBtn').addEventListener('click', () => {
+      const name = document.getElementById('username').value.trim();
+      
+      if (!name) {
+        alert('Nickname is mandatory! Please enter your name to join.');
         return;
       }
 
-      if (!gameIsOpen) {
-        gameIsOpen = true;
-        currentQuestionIdx = 0;
-        questionsAnsweredCount = 0;
-        correctAnswersCount = 0;
-        totalTimeTaken = 0;
-        loadNextQuestion();
-      }
+      playerId = 'player_' + Math.random().toString(36).substring(2, 9);
+      playerName = name;
+
+      // Register new player in Firebase
+      set(ref(db, `players/${playerId}`), { 
+        name: playerName, 
+        questionsAnswered: 0,
+        correctAnswers: 0,
+        totalTime: 0
+      });
+
+      document.getElementById('join-section').style.display = 'none';
+      document.getElementById('quiz-section').style.display = 'block';
+      document.getElementById('playerBadge').innerText = `Player: ${playerName}`;
+
+      initGameListener();
     });
-  }
 
-  function loadNextQuestion() {
-    clearInterval(timerInterval);
+    function initGameListener() {
+      onValue(ref(db, 'gameState'), (snapshot) => {
+        const state = snapshot.val();
 
-    if (currentQuestionIdx >= quizQuestions.length) {
-      document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Leaderboard.";
-      document.getElementById('optionsContainer').innerHTML = '';
-      document.getElementById('timer').innerText = '';
-      document.getElementById('progress').innerText = '';
-      return;
+        if (!state || state.status !== 'OPEN') {
+          gameIsOpen = false;
+          clearInterval(timerInterval);
+          document.getElementById('questionText').innerText = "Waiting for the Host to open the quiz session...";
+          document.getElementById('optionsContainer').innerHTML = '';
+          document.getElementById('timer').innerText = '';
+          document.getElementById('progress').innerText = '';
+          currentQuestionIdx = 0;
+          questionsAnsweredCount = 0;
+          correctAnswersCount = 0;
+          totalTimeTaken = 0;
+          return;
+        }
+
+        if (!gameIsOpen) {
+          gameIsOpen = true;
+          currentQuestionIdx = 0;
+          questionsAnsweredCount = 0;
+          correctAnswersCount = 0;
+          totalTimeTaken = 0;
+          loadNextQuestion();
+        }
+      });
     }
 
-    const q = quizQuestions[currentQuestionIdx];
-    questionStartTimestamp = Date.now();
+    function loadNextQuestion() {
+      clearInterval(timerInterval);
 
-    document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${quizQuestions.length}`;
-    document.getElementById('questionText').innerText = q.text;
-
-    const container = document.getElementById('optionsContainer');
-    container.innerHTML = '';
-
-    q.options.forEach((opt, idx) => {
-      const btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.innerText = opt;
-      btn.onclick = () => submitAnswer(idx);
-      container.appendChild(btn);
-    });
-
-    timerInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - questionStartTimestamp) / 1000);
-      const remaining = q.duration - elapsed;
-
-      if (remaining <= 0) {
-        clearInterval(timerInterval);
-        totalTimeTaken += q.duration;
-        questionsAnsweredCount += 1;
-        syncStatsToFirebase();
-        currentQuestionIdx++;
-        loadNextQuestion();
-      } else {
-        document.getElementById('timer').innerText = `⏱ Time Remaining: ${remaining}s`;
+      if (currentQuestionIdx >= quizQuestions.length) {
+        document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Live Leaderboard for final results.";
+        document.getElementById('optionsContainer').innerHTML = '';
+        document.getElementById('timer').innerText = '';
+        document.getElementById('progress').innerText = '';
+        return;
       }
-    }, 200);
-  }
 
-  function submitAnswer(chosenIdx) {
-    clearInterval(timerInterval);
+      const q = quizQuestions[currentQuestionIdx];
+      questionStartTimestamp = Date.now();
 
-    const q = quizQuestions[currentQuestionIdx];
-    const timeTaken = Math.min(q.duration, (Date.now() - questionStartTimestamp) / 1000);
-    
-    totalTimeTaken += timeTaken;
-    questionsAnsweredCount += 1;
+      document.getElementById('progress').innerText = `Question ${currentQuestionIdx + 1} of ${quizQuestions.length}`;
+      document.getElementById('questionText').innerText = q.text;
 
-    if (chosenIdx === q.correctIndex) {
-      correctAnswersCount += 1;
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.innerText = opt;
+        btn.onclick = () => submitAnswer(idx);
+        container.appendChild(btn);
+      });
+
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - questionStartTimestamp) / 1000);
+        const remaining = q.duration - elapsed;
+
+        if (remaining <= 0) {
+          // Time expired for this question: log full duration and move to next question automatically
+          clearInterval(timerInterval);
+          totalTimeTaken += q.duration;
+          questionsAnsweredCount += 1;
+          syncStatsToFirebase();
+          currentQuestionIdx++;
+          loadNextQuestion();
+        } else {
+          document.getElementById('timer').innerText = `⏱ Time Remaining: ${remaining}s`;
+        }
+      }, 200);
     }
 
-    syncStatsToFirebase();
+    function submitAnswer(chosenIdx) {
+      clearInterval(timerInterval);
 
-    currentQuestionIdx++;
-    loadNextQuestion();
-  }
+      const q = quizQuestions[currentQuestionIdx];
+      const timeTaken = Math.min(q.duration, (Date.now() - questionStartTimestamp) / 1000);
+      
+      totalTimeTaken += timeTaken;
+      questionsAnsweredCount += 1;
 
-  function syncStatsToFirebase() {
-    update(ref(db, `players/${playerId}`), { 
-      questionsAnswered: questionsAnsweredCount,
-      correctAnswers: correctAnswersCount,
-      totalTime: Number(totalTimeTaken.toFixed(2))
-    });
-  }
-</script>
+      if (chosenIdx === q.correctIndex) {
+        correctAnswersCount += 1;
+      }
+
+      syncStatsToFirebase();
+
+      // Instant transition to next question
+      currentQuestionIdx++;
+      loadNextQuestion();
+    }
+
+    function syncStatsToFirebase() {
+      update(ref(db, `players/${playerId}`), { 
+        questionsAnswered: questionsAnsweredCount,
+        correctAnswers: correctAnswersCount,
+        totalTime: Number(totalTimeTaken.toFixed(2))
+      });
+    }
+  </script>
+</body>
+</html>
