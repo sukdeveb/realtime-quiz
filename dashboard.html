@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Quiz Leaderboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background-color: #007bff; color: white; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>🏆 Live Leaderboard</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Player</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody">
+      <tr><td colspan="3">Waiting for players to join...</td></tr>
+    </tbody>
+  </table>
+
+  <script type="module">
+    import { db, ref, onValue } from './firebase-config.js';
+
+    onValue(ref(db, 'players'), (snapshot) => {
+      const players = snapshot.val() || {};
+      const tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '';
+
+      const playerList = Object.values(players);
+      playerList.sort((a, b) => b.score - a.score);
+
+      if (playerList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3">Waiting for players...</td></tr>';
+        return;
+      }
+
+      playerList.forEach((p, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${index + 1}</td>
+          <td>${p.name}</td>
+          <td><strong>${p.score} pts</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+  </script>
+</body>
+</html>
