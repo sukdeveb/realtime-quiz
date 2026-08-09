@@ -22,6 +22,7 @@
   </div>
 
   <div id="quiz-section" style="display:none;">
+    <div id="progress"></div>
     <div id="timer">Waiting for Host to start...</div>
     <h2 id="questionText"></h2>
     <div id="optionsContainer"></div>
@@ -33,7 +34,8 @@
     let playerId = localStorage.getItem('quiz_player_id');
     let playerName = localStorage.getItem('quiz_player_name');
     let timerInterval = null;
-    let currentQuestionId = null;
+    let currentQuestionIdx = -1;
+    let answeredQuestions = new Set();
 
     if (playerId && playerName) {
       showQuizScreen();
@@ -62,17 +64,30 @@
       const qData = snapshot.val();
       const container = document.getElementById('optionsContainer');
       const timerDisplay = document.getElementById('timer');
+      const progressDisplay = document.getElementById('progress');
 
       if (!qData) {
-        document.getElementById('questionText').innerText = "Waiting for Host to activate a question...";
+        document.getElementById('questionText').innerText = "Waiting for Host to start the quiz...";
         container.innerHTML = '';
         timerDisplay.innerText = '';
+        progressDisplay.innerText = '';
         clearInterval(timerInterval);
+        answeredQuestions.clear();
         return;
       }
 
-      if (currentQuestionId !== qData.questionId) {
-        currentQuestionId = qData.questionId;
+      if (qData.status === 'FINISHED') {
+        clearInterval(timerInterval);
+        document.getElementById('questionText').innerText = "🎉 Quiz Completed! Check the Dashboard for final scores.";
+        container.innerHTML = '';
+        timerDisplay.innerText = '';
+        return;
+      }
+
+      // Detect New Question
+      if (currentQuestionIdx !== qData.questionIndex) {
+        currentQuestionIdx = qData.questionIndex;
+        progressDisplay.innerText = `Question ${qData.questionIndex + 1} of ${qData.totalQuestions}`;
         document.getElementById('questionText').innerText = qData.text;
         container.innerHTML = '';
 
@@ -85,7 +100,7 @@
         });
       }
 
-      // Live Timer Sync
+      // Synchronize Live Countdown
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - qData.startTimestamp) / 1000);
@@ -94,7 +109,9 @@
         if (remaining <= 0) {
           clearInterval(timerInterval);
           timerDisplay.innerText = "⏰ Time's Up!";
-          container.innerHTML = '<h3>Time for this question has expired!</h3>';
+          if (!answeredQuestions.has(currentQuestionIdx)) {
+            container.innerHTML = '<h3>Time expired for this question!</h3>';
+          }
         } else {
           timerDisplay.innerText = `⏱ Time Remaining: ${remaining}s`;
         }
@@ -102,15 +119,17 @@
     });
 
     function submitAnswer(chosenIdx, qData) {
+      if (answeredQuestions.has(qData.questionIndex)) return;
+      answeredQuestions.add(qData.questionIndex);
+
       const timeTaken = (Date.now() - qData.startTimestamp) / 1000;
       let pointsAwarded = 0;
 
       if (chosenIdx === qData.correctIndex && timeTaken <= qData.duration) {
-        // Calculate points based on speed (max 1000 points, min 100)
         pointsAwarded = Math.max(100, Math.round(1000 - timeTaken * 25));
       }
 
-      // Update player score in Firebase
+      // Add points to current accumulated score
       onValue(ref(db, `players/${playerId}/score`), (snapshot) => {
         const currentScore = snapshot.val() || 0;
         update(ref(db, `players/${playerId}`), {
