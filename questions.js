@@ -1,224 +1,197 @@
 export const quizQuestions = [
-  // --- Section 1: Agriculture Statistics & Overview ---
   {
-    text: "India's estimated foodgrain production in 2025–26 is closest to:",
-    options: ["280 million tonnes", "330 million tonnes", "377 million tonnes", "450 million tonnes"],
-    correctIndex: 2,
-    duration: 30
-  },
-
-  {
-    text: "Which of these has the highest estimated production in 2025–26?",
-    options: ["Groundnut", "Soybean", "Rapeseed & mustard", "Sunflower"],
-    correctIndex: 2,
-    duration: 30
-  },
-
-  {
-    text: "The average operational landholding in India is about:",
-    options: ["0.5 ha", "1.1 ha", "2.5 ha", "5.0 ha"],
-    correctIndex: 1,
+    text: "What is the maximum turnover limit for a company to retain its DPIIT \"Startup\" recognition in India?",
+    options: ["₹50 Crore", "₹100 Crore", "₹250 Crore", "₹500 Crore"],
+    correctIndex: 1, // B) ₹100 Crore
     duration: 30
   },
   {
-    text: "Small and marginal holdings together constitute approximately what share of India's operational holdings?",
-    options: ["45%", "60%", "70%", "86%"],
-    correctIndex: 3,
-    duration: 30
-  },
-
-  {
-    text: "India is the world's largest producer of:",
-    options: ["Wheat", "Maize", "Pulses", "Barley"],
-    correctIndex: 2,
-    duration: 30
-  },
-  {
-    text: "Which is the largest single source of irrigation in India?",
-    options: ["Canals", "Tanks", "Tube wells", "Lift irrigation"],
-    correctIndex: 2,
-    duration: 30
-  },
-
-  {
-    text: "India's global rank in fruit production is:",
-    options: ["1st", "2nd", "3rd", "4th"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "India's global rank in sugarcane production is:",
-    options: ["1st", "2nd", "3rd", "4th"],
-    correctIndex: 1,
-    duration: 30
-  },
-
-  {
-    text: "Which fertilizer nutrient is consumed the most in Indian agriculture?",
-    options: ["Phosphorus", "Potassium", "Nitrogen", "Sulphur"],
-    correctIndex: 2,
-    duration: 30
-  },
-
-  {
-    text: "India’s cropping intensity is approximately:",
-    options: ["110%", "130%", "156%", "200%"],
-    correctIndex: 2,
-    duration: 30
-  },
-
-  // --- Section 2: Farm Power & Engines ---
-  {
-    text: "Which is generally best suited to small and fragmented holdings?",
-    options: ["Combine harvester", "Power tiller", "Self-propelled sprayer", "Crawler tractor"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "The main purpose of a tractor PTO is:",
-    options: ["Steering the tractor", "Operating implements", "Starting the engine", "Applying brakes"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "A commonly used standard tractor PTO speed is:",
-    options: ["240 rpm", "540 rpm", "1200 rpm", "1700 rpm"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "A tractor differential allows:",
+    text: "In venture capital, what does a \"Down Round\" signify?",
     options: [
-      "Both rear wheels rotate at the same speed",
-      "Rear wheels rotate at different speeds while turning",
-      "Front wheels rotate faster than rear wheels",
-      "Engine speed remains constant"
+      "Founders stepping down",
+      "Valuation dropping below the previous round",
+      "Closing a funding round quickly",
+      "Transitioning from equity to debt"
     ],
-    correctIndex: 1,
+    correctIndex: 1, // B) Valuation dropping below the previous round
     duration: 30
   },
   {
-    text: "A tractor three-point linkage has:",
+    text: "What does \"Cap Table\" primarily represent for a startup?",
     options: [
-      "One upper and one lower link",
-      "Two upper and one lower link",
-      "One upper and two lower links",
-      "Three lower links"
+      "Revenue milestones",
+      "Board of Directors hierarchy",
+      "Ownership structure and equity",
+      "Annual capital expenditure"
     ],
-    correctIndex: 2,
+    correctIndex: 2, // C) Ownership structure and equity
     duration: 30
   },
   {
-    text: "A conventional agricultural diesel engine uses:",
-    options: ["Spark ignition", "Compression ignition", "Battery ignition", "Magneto ignition"],
-    correctIndex: 1,
-    duration: 30
-  },
-
-  {
-    text: "The governor of a tractor engine primarily controls:",
-    options: ["Fuel temperature", "Engine speed under varying load", "Lubricating-oil pressure", "Cooling-water level"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "The main function of an engine flywheel is to:",
-    options: ["Increase compression ratio", "Smooth cyclic speed fluctuations", "Cool the engine", "Increase tyre traction"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "In a four-stroke engine, one power stroke occurs in:",
-    options: ["Every half revolution", "Every revolution", "Every two revolutions", "Every four revolutions"],
-    correctIndex: 2,
-    duration: 30
-  },
-  {
-    text: "Custom Hiring Centres mainly help small farmers to:",
+    text: "The Startup India Seed Fund Scheme (SISFS) aims to provide financial assistance for which stage?",
     options: [
-      "Increase landholding size",
-      "Provide machinery access without ownership",
-      "Replace all farm labour",
-      "Provide only tractor loans"
+      "Series B expansion",
+      "IPO preparation",
+      "Proof of concept and early trials",
+      "International acquisitions"
     ],
-    correctIndex: 1,
-    duration: 30
-  },
-
-  // --- Section 3: Farm Machinery & Tillage Implements ---
-  {
-    text: "Which implement is primarily used for soil inversion during primary tillage?",
-    options: ["Mouldboard plough", "Disc harrow", "Cultivator", "Land leveller"],
-    correctIndex: 0,
-    duration: 30
-  },
-
-  {
-    text: "Which implement is mainly used for secondary tillage?",
-    options: ["Mouldboard plough", "Subsoiler", "Disc harrow", "Chisel plough"],
-    correctIndex: 2,
+    correctIndex: 2, // C) Proof of concept and early trials
     duration: 30
   },
   {
-    text: "What is the main purpose of a subsoiler?",
-    options: ["Invert the topsoil", "Break a hardpan below normal tillage depth", "Harvest standing crop", "Form puddled soil"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "What is the main function of the mouldboard of a plough?",
+    text: "Which legal entity structure is most preferred by venture capitalists investing in Indian startups?",
     options: [
-      "Cut the furrow slice horizontally",
-      "Invert and pulverize the furrow slice",
-      "Resist side thrust",
-      "Cut crop residues vertically"
+      "Sole Proprietorship",
+      "Limited Liability Partnership (LLP)",
+      "Private Limited Company",
+      "Section 8 Company"
     ],
-    correctIndex: 1,
-    duration: 30
-  },
-
-
-  {
-    text: "Which part of a mouldboard plough helps resist the side thrust?",
-    options: ["Mouldboard", "Share", "Landside", "Coulter"],
-    correctIndex: 2,
+    correctIndex: 2, // C) Private Limited Company
     duration: 30
   },
   {
-    text: "The angle between the plane of a disc and the direction of travel is called:",
-    options: ["Disc angle", "Tilt angle", "Rake angle", "Clearance angle"],
-    correctIndex: 0,
-    duration: 30
-  },
-  {
-    text: "The backward inclination of a disc from the vertical is called:",
-    options: ["Disc angle", "Tilt angle", "Helix angle", "Draft angle"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "A tractor-operated rotavator normally receives power through the:",
-    options: ["Engine flywheel", "PTO", "Front axle", "Drawbar only"],
-    correctIndex: 1,
-    duration: 30
-  },
-  {
-    text: "The main objective of puddling in rice fields is to:",
-    options: ["Increase soil permeability", "Reduce percolation losses", "Increase clod size", "Deepen the hardpan"],
-    correctIndex: 1,
-    duration: 30
-  },
-
-  {
-    text: "What is the main advantage of a seed drill over broadcasting?",
+    text: "A startup described as a \"Soonicorn\" is one that is:",
     options: [
-      "Broadcast seeds randomly",
-      "Place seeds at controlled depth and spacing",
-      "Only cover seeds after broadcasting",
-      "Apply irrigation water"
+      "Transitioning to a unicorn valuation ($1B)",
+      "Focused purely on sustainable agriculture",
+      "Bootstrapped with zero debt",
+      "Less than one year old"
     ],
-    correctIndex: 1,
+    correctIndex: 0, // A) Transitioning to a unicorn valuation ($1B)
     duration: 30
   },
-
+  {
+    text: "\"Angel Tax\" in India was historically levied on:",
+    options: [
+      "Profits made by angel investors",
+      "Unlisted shares issued above fair market value",
+      "ESOPs granted to early employees",
+      "Foreign Direct Investment (FDI)"
+    ],
+    correctIndex: 1, // B) Unlisted shares issued above fair market value
+    duration: 30
+  },
+  {
+    text: "SAFE notes are a popular funding instrument. What does SAFE stand for?",
+    options: [
+      "Standard Agreement for Funding Entrepreneurs",
+      "Simple Agreement for Future Equity",
+      "Scalable Asset and Financial Equity",
+      "Secure Advance for Enterprise"
+    ],
+    correctIndex: 1, // B) Simple Agreement for Future Equity
+    duration: 30
+  },
+  {
+    text: "What is the primary objective of the government's e-NAM portal?",
+    options: [
+      "Direct cash transfers to farmers",
+      "Creating a unified national market for agricultural commodities",
+      "Providing satellite weather data",
+      "Distributing subsidized fertilizers"
+    ],
+    correctIndex: 1, // B) Creating a unified national market for agricultural commodities
+    duration: 30
+  },
+  {
+    text: "India is the world's largest producer of which of the following?",
+    options: ["Wheat", "Rice", "Milk", "Soybeans"],
+    correctIndex: 2, // C) Milk
+    duration: 30
+  },
+  {
+    text: "The Kharif cropping season generally aligns with which weather phenomenon?",
+    options: [
+      "South-West Monsoon",
+      "North-East Monsoon",
+      "Western Disturbances",
+      "Pre-monsoon showers"
+    ],
+    correctIndex: 0, // A) South-West Monsoon
+    duration: 30
+  },
+  {
+    text: "Which technology is the absolute backbone of \"Precision Farming\"?",
+    options: [
+      "Blockchain",
+      "IoT sensors and GPS",
+      "Virtual Reality",
+      "CRISPR gene editing"
+    ],
+    correctIndex: 1, // B) IoT sensors and GPS
+    duration: 30
+  },
+  {
+    text: "Which Indian state is currently the largest producer of soybeans?",
+    options: ["Punjab", "Maharashtra", "Madhya Pradesh", "Uttar Pradesh"],
+    correctIndex: 1, // B) Maharashtra (set to 2 if your syllabus prefers Madhya Pradesh)
+    duration: 30
+  },
+  {
+    text: "The \"Blue Revolution\" in India is associated with the massive growth of:",
+    options: [
+      "Indigo cultivation",
+      "Poultry farming",
+      "Aquaculture and fisheries",
+      "Micro-irrigation"
+    ],
+    correctIndex: 2, // C) Aquaculture and fisheries
+    duration: 30
+  },
+  {
+    text: "What is the most heavily consumed fertilizer component in Indian agriculture?",
+    options: ["Phosphorus", "Potassium", "Nitrogen (Urea)", "Zinc"],
+    correctIndex: 2, // C) Nitrogen (Urea)
+    duration: 30
+  },
+  {
+    text: "Which of these is strictly classified as a commercial (cash) crop in India?",
+    options: [
+      "Pearl Millet (Bajra)",
+      "Cotton",
+      "Lentils (Masoor)",
+      "Sorghum (Jowar)"
+    ],
+    correctIndex: 1, // B) Cotton
+    duration: 30
+  },
+  {
+    text: "Commercial drones used for AgriTech spraying must be certified and regulated by which body?",
+    options: ["NABARD", "ICAR", "DGCA", "FSSAI"],
+    correctIndex: 2, // C) DGCA
+    duration: 30
+  },
+  {
+    text: "What does MSP stand for in the context of crop procurement?",
+    options: [
+      "Maximum Selling Price",
+      "Minimum Support Price",
+      "Marginal Standard Price",
+      "Mandatory State Procurement"
+    ],
+    correctIndex: 1, // B) Minimum Support Price
+    duration: 30
+  },
+  {
+    text: "Which prominent Indian institution launched the \"AGRI UDAAN\" food and agribusiness accelerator?",
+    options: [
+      "IIT Kharagpur",
+      "IIM Ahmedabad (CIIE)",
+      "NAARM (a-IDEA)",
+      "NITI Aayog"
+    ],
+    correctIndex: 2, // C) NAARM (a-IDEA)
+    duration: 30
+  },
+  {
+    text: "In soil health management, what does \"NPK\" stand for?",
+    options: [
+      "Nitrogen, Phosphorus, Potassium",
+      "Natural Plant Kinetics",
+      "Nitrates, Phosphates, Krypton",
+      "Nutrient Permeability Konstants"
+    ],
+    correctIndex: 0, // A) Nitrogen, Phosphorus, Potassium
+    duration: 30
+  }
 ];
